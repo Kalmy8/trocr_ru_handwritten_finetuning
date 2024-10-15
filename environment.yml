@@ -1,0 +1,19 @@
+name: TrOCR_custom_training
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - black
+  - flake8
+  - isort
+  - pip
+  - typer
+  - loguru
+  - tqdm
+  - torch
+  - pip:
+    - python-dotenv
+    - transformers
+    - datasets
+    - evaluate
+    - scikit-learn

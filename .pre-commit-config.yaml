@@ -1,0 +1,43 @@
+exclude: 'tasks\.py$'
+
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v5.0.0
+  hooks:
+  - id: check-json
+  - id: check-toml
+  - id: check-yaml
+  - id: check-merge-conflict
+  - id: debug-statements
+
+- repo: https://github.com/PyCQA/isort
+  rev: 5.13.2
+  hooks:
+  - id: isort
+
+- repo: https://github.com/psf/black
+  rev: 24.8.0
+  hooks:
+  - id: black
+    exclude: migrations
+    args: [--config=pyproject.toml]
+
+- repo: https://github.com/PyCQA/flake8
+  rev: 7.1.1
+  hooks:
+  - id: flake8
+    args: [--config=pyproject.toml]
+    additional_dependencies: [ Flake8-pyproject ]
+
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: v1.11.2
+  hooks:
+  - id: mypy
+    args: [--python-version=3.9 , --config-file=pyproject.toml]
+    additional_dependencies: [types-requests]
+
+- repo: https://github.com/commitizen-tools/commitizen
+  rev: v3.29.1
+  hooks:
+  - id: commitizen
+    stages: [commit-msg]
