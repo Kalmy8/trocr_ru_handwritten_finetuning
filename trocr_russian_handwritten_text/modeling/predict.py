@@ -1,30 +1,50 @@
+import pickle
 from pathlib import Path
 
 import typer
 from loguru import logger
 from tqdm import tqdm
+import torch
+from torch.utils.data import DataLoader
 
 from trocr_russian_handwritten_text.config import MODELS_DIR, PROCESSED_DATA_DIR
+from models.models import processor, VisionEncoderDecoderModel
+from trocr_russian_handwritten_text.dataset import HandwrittingDataset
 
-app = typer.Typer()
-
-
-@app.command()
-def main(
-    # ---- REPLACE DEFAULT PATHS AS APPROPRIATE ----
-    features_path: Path = PROCESSED_DATA_DIR / "test_features.csv",
-    model_path: Path = MODELS_DIR / "model.pkl",
-    predictions_path: Path = PROCESSED_DATA_DIR / "test_predictions.csv",
-    # -----------------------------------------
-):
-    # ---- REPLACE THIS WITH YOUR OWN CODE ----
+def main():
     logger.info("Performing inference for model...")
-    for i in tqdm(range(10), total=10):
-        if i == 5:
-            logger.info("Something happened for iteration 5.")
-    logger.success("Inference complete.")
-    # -----------------------------------------
+    model = VisionEncoderDecoderModel.from_pretrained(MODELS_DIR)
+    # Loading the dataset
+    with open(PROCESSED_DATA_DIR / "test_dataset.pkl", "rb") as f:
+        test_dataset = pickle.load(f)
 
+    # Initialize your dataset
+    dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False)  # Set batch_size as needed
+
+    # Ensure your model is in evaluation mode
+    model.eval()
+
+    # List to hold the generated texts
+    generated_texts = []
+
+    with torch.no_grad():  # Disable gradient calculations for inference
+        for batch in dataloader:
+            pixel_values = batch['pixel_values']  # Extract pixel values from the batch
+
+            # Generate the predicted IDs
+            generated_ids = model.generate(pixel_values)
+
+            # Decode the generated IDs to get the text
+            generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+
+            # Append the generated text to the list
+            generated_texts.append(generated_text)
+
+    # Now you can print or process the generated texts
+    for text in generated_texts:
+        print(text)
+
+    logger.success("Inference complete.")
 
 if __name__ == "__main__":
-    app()
+    main()
