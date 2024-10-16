@@ -15,7 +15,7 @@ from models.models import processor
 RANDOM_STATE = 42
 
 class HandwrittingDataset(Dataset):
-    def __init__(self, image_dir, df , processor, max_target_length=128):
+    def __init__(self, image_dir : Path, df, processor, max_target_length=128):
         self.image_dir = image_dir
         self.df = df
         self.processor = processor
@@ -29,7 +29,7 @@ class HandwrittingDataset(Dataset):
         file_name = self.df['file_name'][idx]
         text = self.df['text'][idx]
         # prepare image (i.e. resize + normalize)
-        image = Image.open(self.image_dir + file_name).convert("RGB")
+        image = Image.open(self.image_dir / file_name).convert("RGB")
         pixel_values = self.processor(image, return_tensors="pt").pixel_values
         # add labels (input_ids) by encoding the text
         labels = self.processor.tokenizer(text,
