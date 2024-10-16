@@ -1,1 +1,1 @@
-from trocr_russian_handwritten_text import config  # noqa: F401
+from trocr_russian_handwritten_text import config, dataset, features, plots  # noqa: F401
