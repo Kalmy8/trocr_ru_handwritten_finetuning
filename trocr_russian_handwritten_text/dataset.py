@@ -1,4 +1,5 @@
 import pickle
+from pathlib import Path
 
 import pandas as pd
 import torch
@@ -9,10 +10,12 @@ from torch.utils.data import Dataset
 from transformers import TrOCRProcessor
 
 from trocr_russian_handwritten_text.config import PROCESSED_DATA_DIR, RAW_DATA_DIR
+from models.models import processor
 
 RANDOM_STATE = 42
+
 class HandwrittingDataset(Dataset):
-    def __init__(self, image_dir, df, processor, max_target_length=128):
+    def __init__(self, image_dir, df , processor, max_target_length=128):
         self.image_dir = image_dir
         self.df = df
         self.processor = processor
@@ -44,7 +47,10 @@ def main():
     df_train = pd.read_csv(RAW_DATA_DIR / "train_labels.txt", header=None, names=['file_name', 'text'], sep=',', quotechar='"', on_bad_lines='skip')
     df_test = pd.read_csv(RAW_DATA_DIR / "test_labels.txt", header=None, names=['file_name', 'text'], sep=',', quotechar='"', on_bad_lines='skip')
     df_train, df_val = train_test_split(df_train, test_size=0.2, random_state=RANDOM_STATE)
-    processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-handwritten")
+
+    # Reset_indexes to start from zero
+    df_train.reset_index(drop=True, inplace=True)
+    df_val.reset_index(drop=True, inplace=True)
 
     # Constructing pytorch datasets
     train_dataset = HandwrittingDataset(image_dir = RAW_DATA_DIR / 'train',
