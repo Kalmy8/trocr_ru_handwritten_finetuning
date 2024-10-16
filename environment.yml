@@ -12,6 +12,7 @@ dependencies:
   - tqdm
   - torch
   - pip:
+    - commitizen
     - python-dotenv
     - transformers
     - datasets
