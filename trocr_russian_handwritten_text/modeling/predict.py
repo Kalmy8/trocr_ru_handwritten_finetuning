@@ -1,19 +1,17 @@
 import pickle
-from pathlib import Path
 
-import typer
-from loguru import logger
-from tqdm import tqdm
 import torch
+from loguru import logger
 from torch.utils.data import DataLoader
 
 from trocr_russian_handwritten_text.config import MODELS_DIR, PROCESSED_DATA_DIR
-from models.models import processor, VisionEncoderDecoderModel
-from trocr_russian_handwritten_text.dataset import HandwrittingDataset
+from transformers import VisionEncoderDecoderModel, TrOCRProcessor
+
+processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-handwritten")
+model = VisionEncoderDecoderModel.from_pretrained(MODELS_DIR)
 
 def main():
     logger.info("Performing inference for model...")
-    model = VisionEncoderDecoderModel.from_pretrained(MODELS_DIR)
     # Loading the dataset
     with open(PROCESSED_DATA_DIR / "test_dataset.pkl", "rb") as f:
         test_dataset = pickle.load(f)
@@ -29,7 +27,7 @@ def main():
 
     with torch.no_grad():  # Disable gradient calculations for inference
         for batch in dataloader:
-            pixel_values = batch['pixel_values']  # Extract pixel values from the batch
+            pixel_values = batch["pixel_values"]  # Extract pixel values from the batch
 
             # Generate the predicted IDs
             generated_ids = model.generate(pixel_values)
@@ -45,6 +43,7 @@ def main():
         print(text)
 
     logger.success("Inference complete.")
+
 
 if __name__ == "__main__":
     main()

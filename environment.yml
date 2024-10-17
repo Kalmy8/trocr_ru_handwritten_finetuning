@@ -1,6 +1,8 @@
 name: TrOCR_custom_training
 channels:
   - conda-forge
+  - pytorch
+  - nvidia
 dependencies:
   - python=3.10
   - black
@@ -10,7 +12,10 @@ dependencies:
   - typer
   - loguru
   - tqdm
-  - torch
+  - pytorch
+  - torchvision
+  - torchaudio
+  - pytorch-cuda=12.4
   - pip:
     - accelerate
     - jiwer

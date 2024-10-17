@@ -1,29 +1,47 @@
 import pickle
-from pathlib import Path
-from transformers import TrOCRProcessor, VisionEncoderDecoderModel
-from PIL import Image
-import requests
-import typer
-from loguru import logger
-from tqdm import tqdm
-from transformers import Seq2SeqTrainer, Seq2SeqTrainingArguments
 
 from evaluate import load
-from transformers import default_data_collator
-from trocr_russian_handwritten_text.dataset import HandwrittingDataset
+from loguru import logger
+from transformers import (
+    Seq2SeqTrainer,
+    Seq2SeqTrainingArguments,
+    default_data_collator,
+)
+
 from trocr_russian_handwritten_text.config import MODELS_DIR, PROCESSED_DATA_DIR
-from models.models import model, processor
+from transformers import VisionEncoderDecoderModel, TrOCRProcessor
+
 cer_metric = load("cer")
+
+processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-handwritten")
+model = VisionEncoderDecoderModel.from_pretrained("microsoft/trocr-base-stage1")
+
+# set special tokens used for creating the decoder_input_ids from the labels
+model.config.decoder_start_token_id = processor.tokenizer.cls_token_id
+model.config.pad_token_id = processor.tokenizer.pad_token_id
+# make sure vocab size is set correctly
+model.config.vocab_size = model.config.decoder.vocab_size
+
+# set beam search parameters
+model.config.eos_token_id = processor.tokenizer.sep_token_id
+model.config.max_length = 64
+model.config.early_stopping = True
+model.config.no_repeat_ngram_size = 3
+model.config.length_penalty = 2.0
+model.config.num_beams = 4
+
 
 def compute_cer(pred):
     labels_ids = pred.label_ids
     pred_ids = pred.predictions
+
 
     pred_str = processor.batch_decode(pred_ids, skip_special_tokens=True)
     labels_ids[labels_ids == -100] = processor.tokenizer.pad_token_id
     label_str = processor.batch_decode(labels_ids, skip_special_tokens=True)
     cer = cer_metric.compute(predictions=pred_str, references=label_str)
     return {"cer": cer}
+
 
 def main():
     logger.info("Training model...")
@@ -56,7 +74,6 @@ def main():
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         data_collator=default_data_collator,
-
     )
     trainer.train()
     logger.success("Modeling training complete.")
