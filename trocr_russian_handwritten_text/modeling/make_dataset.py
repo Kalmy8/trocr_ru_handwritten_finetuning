@@ -1,14 +1,12 @@
 import pickle
 from pathlib import Path
-
 import pandas as pd
 import torch
 from PIL import Image
 from loguru import logger
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
-
-from models.models import processor
+from transformers import TrOCRProcessor
 from trocr_russian_handwritten_text.config import PROCESSED_DATA_DIR, RAW_DATA_DIR
 
 RANDOM_STATE = 42
@@ -43,7 +41,7 @@ class HandwrittingDataset(Dataset):
         return encoding
 
 
-def main():
+def make_dataset_main():
     logger.info("Processing raw data...")
 
     df_train = pd.read_csv(
@@ -67,6 +65,9 @@ def main():
     # Reset_indexes to start from zero
     df_train.reset_index(drop=True, inplace=True)
     df_val.reset_index(drop=True, inplace=True)
+
+    # Importing processor for tokenizing
+    processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-handwritten")
 
     # Constructing pytorch datasets
     train_dataset = HandwrittingDataset(
@@ -93,4 +94,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    make_dataset_main()

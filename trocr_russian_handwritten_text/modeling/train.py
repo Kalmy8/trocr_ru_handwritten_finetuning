@@ -1,49 +1,28 @@
 import pickle
+from functools import partial
 
 from evaluate import load
 from loguru import logger
 from transformers import (
     Seq2SeqTrainer,
     Seq2SeqTrainingArguments,
-    default_data_collator,
+    default_data_collator, EvalPrediction,
 )
 
 from trocr_russian_handwritten_text.config import MODELS_DIR, PROCESSED_DATA_DIR
 from transformers import VisionEncoderDecoderModel, TrOCRProcessor
 
 cer_metric = load("cer")
-
-processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-handwritten")
-model = VisionEncoderDecoderModel.from_pretrained("microsoft/trocr-base-stage1")
-
-# set special tokens used for creating the decoder_input_ids from the labels
-model.config.decoder_start_token_id = processor.tokenizer.cls_token_id
-model.config.pad_token_id = processor.tokenizer.pad_token_id
-# make sure vocab size is set correctly
-model.config.vocab_size = model.config.decoder.vocab_size
-
-# set beam search parameters
-model.config.eos_token_id = processor.tokenizer.sep_token_id
-model.config.max_length = 64
-model.config.early_stopping = True
-model.config.no_repeat_ngram_size = 3
-model.config.length_penalty = 2.0
-model.config.num_beams = 4
-
-
-def compute_cer(pred):
-    labels_ids = pred.label_ids
-    pred_ids = pred.predictions
-
-
+def compute_cer_base(processor, eval_pred: EvalPrediction):
+    labels_ids = eval_pred.label_ids
+    pred_ids = eval_pred.predictions
     pred_str = processor.batch_decode(pred_ids, skip_special_tokens=True)
     labels_ids[labels_ids == -100] = processor.tokenizer.pad_token_id
     label_str = processor.batch_decode(labels_ids, skip_special_tokens=True)
     cer = cer_metric.compute(predictions=pred_str, references=label_str)
     return {"cer": cer}
 
-
-def main():
+def train_main():
     logger.info("Training model...")
 
     # Loading the datasets
@@ -52,6 +31,28 @@ def main():
 
     with open(PROCESSED_DATA_DIR / "eval_dataset.pkl", "rb") as f:
         eval_dataset = pickle.load(f)
+
+    # Initialize a tokenizer and a model
+    processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-handwritten")
+    model = VisionEncoderDecoderModel.from_pretrained("microsoft/trocr-base-stage1")
+
+    # set special tokens used for creating the decoder_input_ids from the labels
+    model.config.decoder_start_token_id = processor.tokenizer.cls_token_id
+    model.config.pad_token_id = processor.tokenizer.pad_token_id
+
+    # make sure vocab size is set correctly
+    model.config.vocab_size = model.config.decoder.vocab_size
+
+    # set beam search parameters
+    model.config.eos_token_id = processor.tokenizer.sep_token_id
+    model.config.max_length = 64
+    model.config.early_stopping = True
+    model.config.no_repeat_ngram_size = 3
+    model.config.length_penalty = 2.0
+    model.config.num_beams = 4
+
+    # pass initialized processor to the compute function
+    compute_cer = partial(compute_cer_base, processor)
 
     training_args = Seq2SeqTrainingArguments(
         predict_with_generate=True,
@@ -80,4 +81,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    train_main()
