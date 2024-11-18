@@ -1,16 +1,11 @@
 import pickle
-
 import torch
 from loguru import logger
 from torch.utils.data import DataLoader
-
 from trocr_russian_handwritten_text.config import MODELS_DIR, PROCESSED_DATA_DIR
 from transformers import VisionEncoderDecoderModel, TrOCRProcessor
 
-processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-handwritten")
-model = VisionEncoderDecoderModel.from_pretrained(MODELS_DIR)
-
-def main():
+def predict_main():
     logger.info("Performing inference for model...")
     # Loading the dataset
     with open(PROCESSED_DATA_DIR / "test_dataset.pkl", "rb") as f:
@@ -18,6 +13,10 @@ def main():
 
     # Initialize your dataset
     dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False)  # Set batch_size as needed
+
+    # Innitializing tokenizer and a model
+    processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-handwritten")
+    model = VisionEncoderDecoderModel.from_pretrained(MODELS_DIR)
 
     # Ensure your model is in evaluation mode
     model.eval()
@@ -46,4 +45,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    predict_main()
