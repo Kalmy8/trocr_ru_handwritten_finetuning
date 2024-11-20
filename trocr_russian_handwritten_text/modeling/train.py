@@ -74,8 +74,8 @@ def train_main():
         model=model,
         tokenizer=processor.image_processor,
         args=training_args,
-        train_dataset=train_dataset.shuffle(seed=42).select(range(50000)),  # Subset for quicker training
-        eval_dataset=eval_dataset.shuffle(seed=42).select(range(5000)),
+        train_dataset=train_dataset.shuffle(random_state=42).select(range(50000)),  # Subset for quicker training
+        eval_dataset=eval_dataset.shuffle(random_state=42).select(range(5000)),
         data_collator=default_data_collator,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=5)],
     )
