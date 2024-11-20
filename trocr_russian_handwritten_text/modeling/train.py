@@ -90,7 +90,16 @@ def train_main():
         eval_dataset=eval_dataset,
         data_collator=default_data_collator,
     )
-    trainer.train(resume_from_checkpoint=True)
+
+    try:
+        trainer.train(resume_from_checkpoint=True)
+    except ValueError as e:
+        if "No valid checkpoint found" in str(e):
+            print("No checkpoint found. Starting training from scratch.")
+            trainer.train()
+        else:
+            raise e
+
     logger.success("Modeling training complete.")
 
 
