@@ -1,5 +1,7 @@
 import pickle
 from pathlib import Path
+from typing import Collection
+
 import pandas as pd
 import torch
 from PIL import Image
@@ -12,7 +14,7 @@ from trocr_russian_handwritten_text.config import PROCESSED_DATA_DIR, RAW_DATA_D
 RANDOM_STATE = 42
 
 class HandwrittingDataset(Dataset):
-    def __init__(self, image_dir: Path, df, processor, max_target_length=128):
+    def __init__(self, image_dir: Path, df: pd.DataFrame, processor, max_target_length=128):
         self.image_dir = image_dir
         self.df = df
         self.processor = processor
@@ -39,6 +41,19 @@ class HandwrittingDataset(Dataset):
 
         encoding = {"pixel_values": pixel_values.squeeze(), "labels": torch.tensor(labels)}
         return encoding
+
+    def shuffle(self, random_state = None):
+        return HandwrittingDataset(self.image_dir,
+                                   self.df.sample(frac=1, random_state = random_state).reset_index(drop = True),
+                                   self.processor,
+                                   self.max_target_length)
+
+    def select(self, idx: Collection):
+        return HandwrittingDataset(self.image_dir,
+                                   self.df.iloc[idx, :].reset_index(drop=True),
+                                   self.processor,
+                                   self.max_target_length)
+
 
 
 def make_dataset_main():
