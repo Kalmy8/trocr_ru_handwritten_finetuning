@@ -6,7 +6,7 @@ from loguru import logger
 from transformers import (
     Seq2SeqTrainer,
     Seq2SeqTrainingArguments,
-    default_data_collator, EvalPrediction,
+    default_data_collator, EvalPrediction, EarlyStoppingCallback,
 )
 
 from trocr_russian_handwritten_text.config import MODELS_DIR, PROCESSED_DATA_DIR
@@ -50,6 +50,7 @@ def train_main():
     model.config.no_repeat_ngram_size = 3
     model.config.length_penalty = 2.0
     model.config.num_beams = 4
+    model.gradient_checkpointing_enable()
 
     # pass initialized processor to the compute function
     compute_cer = partial(compute_cer_base, processor)
@@ -57,13 +58,26 @@ def train_main():
     training_args = Seq2SeqTrainingArguments(
         predict_with_generate=True,
         eval_strategy="steps",
-        per_device_train_batch_size=8,
-        per_device_eval_batch_size=8,
+        per_device_train_batch_size=16,  # Increase batch size if GPU allows
+        per_device_eval_batch_size=16,
         fp16=True,
+        gradient_accumulation_steps=4,  # Simulate larger batch size
         output_dir=MODELS_DIR,
-        logging_steps=2,
-        save_steps=1000,
+        logging_steps=10,
+        save_steps=500,  # Save more frequently
         eval_steps=200,
+        max_steps=1000,  # Limit total training steps
+    )
+
+    # Add EarlyStoppingCallback
+    trainer = Seq2SeqTrainer(
+        model=model,
+        tokenizer=processor.image_processor,
+        args=training_args,
+        train_dataset=train_dataset.shuffle(seed=42).select(range(50000)),  # Subset for quicker training
+        eval_dataset=eval_dataset.shuffle(seed=42).select(range(5000)),
+        data_collator=default_data_collator,
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=5)],
     )
 
     # instantiate trainer
@@ -76,7 +90,7 @@ def train_main():
         eval_dataset=eval_dataset,
         data_collator=default_data_collator,
     )
-    trainer.train()
+    trainer.train(resume_from_checkpoint=True)
     logger.success("Modeling training complete.")
 
 
